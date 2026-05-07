@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync/atomic"
@@ -32,11 +33,11 @@ func rootFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func healthzFunc(w http.ResponseWriter, r *http.Request) {
-	writeStrToServer(w, "OK", "text/plain")
+	writeTextToServer(w, "OK", "text/plain", http.StatusOK)
 }
 
 func metricsFunc(w http.ResponseWriter, r *http.Request) {
-	writeStrToServer(w, fmt.Sprintf(`
+	writeTextToServer(w, fmt.Sprintf(`
 <html>
   <body>
     <h1>Welcome, Chirpy Admin</h1>
@@ -44,12 +45,48 @@ func metricsFunc(w http.ResponseWriter, r *http.Request) {
   </body>
 </html>
 	`,
-	apicfg.getHits()), "text/html")
+	apicfg.getHits()), "text/html", http.StatusOK)
 }
 
 func resetFunc(w http.ResponseWriter, r *http.Request) {
 	apicfg.resetHits()
-	writeStrToServer(w, "Metric Reseted", "text/plain")
+	writeTextToServer(w, "Metric Reseted", "text/plain", http.StatusOK)
+}
+
+func validate_chirpFunc(w http.ResponseWriter, r *http.Request) {
+	const chirpy_size = 140
+	type parameters struct {
+        Body string `json:"body"`
+    }
+	type returnParameters struct {
+		Valid bool `json:"valid"`
+		Error string `json:"error"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	err := decoder.Decode(&params)
+
+	status := 400
+	returnParams := returnParameters{false, "Something went wrong"}
+	var data []byte
+	if err == nil {
+		if len(params.Body) < chirpy_size{
+			returnParams.Error = "None"
+			returnParams.Valid = true
+			status = 200
+		} else {
+			returnParams.Error ="Chirp is too long"
+		}
+
+		data, err = json.Marshal(returnParams)
+		if err != nil {
+			w.WriteHeader(500)
+			return
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	w.Write(data)
 }
 
 ///
@@ -61,13 +98,14 @@ func main(){
 	mux.HandleFunc("GET /admin/healthz", healthzFunc)
 	mux.HandleFunc("GET /admin/metrics", metricsFunc)
 	mux.HandleFunc("POST /admin/reset", resetFunc)
+	mux.HandleFunc("POST /api/validate_chirp", validate_chirpFunc)
 	http.ListenAndServe(":8080", mux)
 }
 
 ///
 
-func writeStrToServer(w http.ResponseWriter, s string, c string){
-	w.Header().Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", c))
-	w.WriteHeader(http.StatusOK)
+func writeTextToServer(w http.ResponseWriter, s string, content string, status int){
+	w.Header().Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", content))
+	w.WriteHeader(status)
 	w.Write([]byte(s))
 }

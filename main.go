@@ -27,7 +27,6 @@ func (cfg *apiConfig)resetHits(){
 
 func rootFunc(w http.ResponseWriter, r *http.Request) {
 	handler := http.FileServer(http.Dir("."))
-	handler = http.StripPrefix("/app", handler)
 	handler = apicfg.middleWareMetricInc(handler)
 	handler.ServeHTTP(w, r)
 }
@@ -51,9 +50,9 @@ func main(){
 	fmt.Printf("Starting Server.")
 	mux := http.NewServeMux()
 	mux.HandleFunc("/app/", rootFunc)
-	mux.HandleFunc("GET /healthz", healthzFunc)
-	mux.HandleFunc("GET /metrics", metricsFunc)
-	mux.HandleFunc("POST /reset", resetFunc)
+	mux.HandleFunc("GET /api/healthz", healthzFunc)
+	mux.HandleFunc("GET /api/metrics", metricsFunc)
+	mux.HandleFunc("POST /api/reset", resetFunc)
 	http.ListenAndServe(":8080", mux)
 }
 

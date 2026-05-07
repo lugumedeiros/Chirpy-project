@@ -32,16 +32,24 @@ func rootFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func healthzFunc(w http.ResponseWriter, r *http.Request) {
-	writeToServer(w, "OK")
+	writeStrToServer(w, "OK", "text/plain")
 }
 
 func metricsFunc(w http.ResponseWriter, r *http.Request) {
-	writeToServer(w, fmt.Sprintf("Hits: %v",apicfg.getHits()))
+	writeStrToServer(w, fmt.Sprintf(`
+<html>
+  <body>
+    <h1>Welcome, Chirpy Admin</h1>
+    <p>Chirpy has been visited %d times!</p>
+  </body>
+</html>
+	`,
+	apicfg.getHits()), "text/html")
 }
 
 func resetFunc(w http.ResponseWriter, r *http.Request) {
 	apicfg.resetHits()
-	writeToServer(w, "Metric Reseted")
+	writeStrToServer(w, "Metric Reseted", "text/plain")
 }
 
 ///
@@ -50,16 +58,16 @@ func main(){
 	fmt.Printf("Starting Server.")
 	mux := http.NewServeMux()
 	mux.HandleFunc("/app/", rootFunc)
-	mux.HandleFunc("GET /api/healthz", healthzFunc)
-	mux.HandleFunc("GET /api/metrics", metricsFunc)
-	mux.HandleFunc("POST /api/reset", resetFunc)
+	mux.HandleFunc("GET /admin/healthz", healthzFunc)
+	mux.HandleFunc("GET /admin/metrics", metricsFunc)
+	mux.HandleFunc("POST /admin/reset", resetFunc)
 	http.ListenAndServe(":8080", mux)
 }
 
 ///
 
-func writeToServer(w http.ResponseWriter, s string){
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+func writeStrToServer(w http.ResponseWriter, s string, c string){
+	w.Header().Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", c))
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(s))
 }

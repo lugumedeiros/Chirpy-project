@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync/atomic"
+	"regexp"
 )
 
 type apiConfig struct {
@@ -61,18 +63,21 @@ func validate_chirpFunc(w http.ResponseWriter, r *http.Request) {
 	type returnParameters struct {
 		Valid bool `json:"valid"`
 		Error string `json:"error"`
+		Cleaned_body string `json:"cleaned_body"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
 	err := decoder.Decode(&params)
 
 	status := 400
-	returnParams := returnParameters{false, "Something went wrong"}
+	returnParams := returnParameters{false, "Something went wrong", ""}
 	var data []byte
 	if err == nil {
 		if len(params.Body) < chirpy_size{
+			clean_chirpy, _ := unprofaneChirp(params.Body)
 			returnParams.Error = "None"
 			returnParams.Valid = true
+			returnParams.Cleaned_body = clean_chirpy
 			status = 200
 		} else {
 			returnParams.Error ="Chirp is too long"
@@ -108,4 +113,13 @@ func writeTextToServer(w http.ResponseWriter, s string, content string, status i
 	w.Header().Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", content))
 	w.WriteHeader(status)
 	w.Write([]byte(s))
+}
+
+func unprofaneChirp(s string)(string, bool){
+	profane_words := []string{"kerfuffle", "sharbert", "fornax"}
+	replacement := `${1}****${3}`
+	regex := regexp.MustCompile(`(?i)(^|\s)(` + strings.Join(profane_words, "|") + `)($|\s)`)
+	replaced := regex.ReplaceAllString(s, replacement)
+	has_profane := replaced != s
+	return replaced, has_profane
 }

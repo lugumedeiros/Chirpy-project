@@ -4,9 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"regexp"
 	"strings"
 	"sync/atomic"
-	"regexp"
+
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
+	"github.com/lugumedeiros/Chirpy-project/internal"
 )
 
 type apiConfig struct {
@@ -15,16 +20,16 @@ type apiConfig struct {
 
 var apicfg apiConfig
 
-func (cfg *apiConfig)middleWareMetricInc(next http.Handler) http.Handler{
+func (cfg *apiConfig) middleWareMetricInc(next http.Handler) http.Handler {
 	cfg.fileserverHits.Add(1)
 	return next
 }
 
-func (cfg *apiConfig)getHits() int{
+func (cfg *apiConfig) getHits() int {
 	return int(cfg.fileserverHits.Load())
 }
 
-func (cfg *apiConfig)resetHits(){
+func (cfg *apiConfig) resetHits() {
 	cfg.fileserverHits.Store(0)
 }
 
@@ -47,7 +52,7 @@ func metricsFunc(w http.ResponseWriter, r *http.Request) {
   </body>
 </html>
 	`,
-	apicfg.getHits()), "text/html", http.StatusOK)
+		apicfg.getHits()), "text/html", http.StatusOK)
 }
 
 func resetFunc(w http.ResponseWriter, r *http.Request) {
@@ -58,11 +63,11 @@ func resetFunc(w http.ResponseWriter, r *http.Request) {
 func validate_chirpFunc(w http.ResponseWriter, r *http.Request) {
 	const chirpy_size = 140
 	type parameters struct {
-        Body string `json:"body"`
-    }
+		Body string `json:"body"`
+	}
 	type returnParameters struct {
-		Valid bool `json:"valid"`
-		Error string `json:"error"`
+		Valid        bool   `json:"valid"`
+		Error        string `json:"error"`
 		Cleaned_body string `json:"cleaned_body"`
 	}
 	decoder := json.NewDecoder(r.Body)
@@ -73,14 +78,14 @@ func validate_chirpFunc(w http.ResponseWriter, r *http.Request) {
 	returnParams := returnParameters{false, "Something went wrong", ""}
 	var data []byte
 	if err == nil {
-		if len(params.Body) < chirpy_size{
+		if len(params.Body) < chirpy_size {
 			clean_chirpy, _ := unprofaneChirp(params.Body)
 			returnParams.Error = "None"
 			returnParams.Valid = true
 			returnParams.Cleaned_body = clean_chirpy
 			status = 200
 		} else {
-			returnParams.Error ="Chirp is too long"
+			returnParams.Error = "Chirp is too long"
 		}
 
 		data, err = json.Marshal(returnParams)
@@ -96,7 +101,15 @@ func validate_chirpFunc(w http.ResponseWriter, r *http.Request) {
 
 ///
 
-func main(){
+func main() {
+	//Initalization
+	err := godotenv.Load()
+	if err != nil {
+		os.Exit(1)
+	}
+	internal.DBConnect()
+
+
 	fmt.Printf("Starting Server.")
 	mux := http.NewServeMux()
 	mux.HandleFunc("/app/", rootFunc)
@@ -109,13 +122,13 @@ func main(){
 
 ///
 
-func writeTextToServer(w http.ResponseWriter, s string, content string, status int){
+func writeTextToServer(w http.ResponseWriter, s string, content string, status int) {
 	w.Header().Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", content))
 	w.WriteHeader(status)
 	w.Write([]byte(s))
 }
 
-func unprofaneChirp(s string)(string, bool){
+func unprofaneChirp(s string) (string, bool) {
 	profane_words := []string{"kerfuffle", "sharbert", "fornax"}
 	replacement := `${1}****${3}`
 	regex := regexp.MustCompile(`(?i)(^|\s)(` + strings.Join(profane_words, "|") + `)($|\s)`)

@@ -21,3 +21,22 @@ func unprofaneChirp(s string) (string, bool) {
 	has_profane := replaced != s
 	return replaced, has_profane
 }
+
+type validatedChirp struct {
+	old string
+	new string
+	profane bool
+	valid bool
+}
+
+func validate_chirpFunc(s string) (v validatedChirp) {
+	const chirpy_size = 140
+	v.old = s
+	if len(s) > chirpy_size{
+		v.valid = false
+		return v
+	}
+	v.valid = true
+	v.new, v.profane = unprofaneChirp(s)
+	return v
+}

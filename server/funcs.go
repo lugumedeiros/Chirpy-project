@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"github.com/lugumedeiros/Chirpy-project/internal/dbman"
+	"strconv"
 )
 
 var apicfg apiConfig
@@ -49,50 +50,16 @@ func resetFunc(w http.ResponseWriter, r *http.Request) {
 	err := dbman.ResetUsers()
 	if err != nil {
 		w.WriteHeader(500)
+		return
+	}
+	err = dbman.DeleteAllChirps()
+	if err != nil {
+		w.WriteHeader(501)
+		return
 	}
 	fmt.Print("FUNC END: RESET\n")
 }
 
-func validate_chirpFunc(w http.ResponseWriter, r *http.Request) {
-	fmt.Print("FUNC START: VALIDATE\n")
-	const chirpy_size = 140
-	type parameters struct {
-		Body string `json:"body"`
-	}
-	type returnParameters struct {
-		Valid        bool   `json:"valid"`
-		Error        string `json:"error"`
-		Cleaned_body string `json:"cleaned_body"`
-	}
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
-
-	status := 400
-	returnParams := returnParameters{false, "Something went wrong", ""}
-	var data []byte
-	if err == nil {
-		if len(params.Body) < chirpy_size {
-			clean_chirpy, _ := unprofaneChirp(params.Body)
-			returnParams.Error = "None"
-			returnParams.Valid = true
-			returnParams.Cleaned_body = clean_chirpy
-			status = 200
-		} else {
-			returnParams.Error = "Chirp is too long"
-		}
-
-		data, err = json.Marshal(returnParams)
-		if err != nil {
-			w.WriteHeader(500)
-			return
-		}
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	w.Write(data)
-	fmt.Print("FUNC END: VALIDATE\n")
-}
 
 func setNewUserFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC START: SET USER\n")
@@ -136,4 +103,58 @@ func setNewUserFunc(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(201)
 	w.Write(data)
 	fmt.Print("FUNC END: SET USER\n")
+}
+
+func postChirpFunc(w http.ResponseWriter, r *http.Request){
+	fmt.Print("FUNC START: POST CHIRP\n")
+	type input struct {
+		Body string `json:"body"`
+		UserId string `json:"user_id"`
+	}
+
+	type output struct {
+		ID int `json:"id"`
+		CreatedAt string `json:"created_at"`
+		UpdatedAt string `json:"updated_at"`
+		UserID string `json:"user_id"`
+		Body string `json:"body"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	inParams := input{}
+	errDec := decoder.Decode(&inParams)
+	if errDec != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(errDec.Error()))
+		return
+	}
+	validatedChirp := validate_chirpFunc(inParams.Body)
+	if !validatedChirp.valid{
+		w.WriteHeader(501)
+		return
+	}
+	userId, _ := strconv.Atoi(inParams.UserId)
+	chirp, errDB := dbman.CreateChirp(userId, inParams.Body)
+	if errDB != nil {
+		w.WriteHeader(502)
+		w.Write([]byte(errDB.Error()))
+		return
+	}
+
+	var outParams output
+	outParams.CreatedAt = chirp.CreatedAt.String()
+	outParams.UpdatedAt = chirp.UpdatedAt.String()
+	outParams.ID = int(chirp.ID)
+	outParams.UserID = fmt.Sprintf("%v", chirp.UserID)
+	outParams.Body = chirp.Body
+	
+	data, err_marshal := json.Marshal(outParams)
+	if err_marshal != nil {
+		w.WriteHeader(503)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	w.Write(data)
+	fmt.Print("FUNC END: POST CHIRP\n")
 }

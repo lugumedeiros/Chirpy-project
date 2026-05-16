@@ -37,3 +37,22 @@ func CreateUser(email string) (database.User, error){
 func ResetUsers()(error){
 	return config.queries.ResetUsers(config.context)
 }
+
+func CreateChirp(userId int, body string) (database.Chirp, error){
+	var params database.CreateChirpParams
+	params.Body = body
+	params.UserID = int32(userId)
+	return config.queries.CreateChirp(config.context, params)
+}
+
+func DeleteChirp(chirpId int) error{
+	return config.queries.DeleteChirp(config.context, int32(chirpId))
+}
+
+func DeleteChirpByUserId(userId int) error {
+	return config.queries.DeleteChirpsByUserId(config.context, int32(userId))
+}
+
+func DeleteAllChirps() error {
+	return config.queries.DeleteAllChirps(config.context)
+}

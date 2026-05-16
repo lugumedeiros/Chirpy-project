@@ -1,8 +1,9 @@
-package internal
+package dbman
 
 import (
 	"database/sql"
 	"os"
+	"context"
 
 	"github.com/lugumedeiros/Chirpy-project/internal/database"
 )
@@ -10,6 +11,7 @@ import (
 type dbconfig struct {
 	db      *sql.DB
 	queries *database.Queries
+	context context.Context
 }
 
 var config dbconfig
@@ -24,5 +26,14 @@ func DBConnect() error {
 
 	config.db = db
 	config.queries = dbQueries
+	config.context = context.Background()
 	return nil
+}
+
+func CreateUser(email string) (database.User, error){
+	return config.queries.CreateUser(config.context, email)
+}
+
+func ResetUsers()(error){
+	return config.queries.ResetUsers(config.context)
 }

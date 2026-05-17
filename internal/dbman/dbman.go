@@ -60,3 +60,7 @@ func DeleteAllChirps() error {
 func GetAllChirps() ([]database.Chirp, error) {
 	return config.queries.GetAllChirps(config.context)
 }
+
+func GetChirp(chirpID int) (database.Chirp, error) {
+	return config.queries.GetChirp(config.context, int32(chirpID))
+}

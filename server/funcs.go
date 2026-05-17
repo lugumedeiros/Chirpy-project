@@ -195,4 +195,44 @@ func getChirpFunc(w http.ResponseWriter, r *http.Request){
 	w.WriteHeader(200)
 	w.Write(data)
 	fmt.Print("FUNC END: GET CHIRPS\n")
+
+}
+
+func getChirpByIdFunc(w http.ResponseWriter, r *http.Request){
+	type output struct {
+		ID string `json:"id"`
+		CreatedAt string `json:"created_at"`
+		UpdatedAt string `json:"updated_at"`
+		UserID string `json:"user_id"`
+		Body string `json:"body"`
+	}
+	fmt.Print("FUNC START: GET CHIRP\n")
+	
+	id, errconv := strconv.Atoi(r.PathValue("id"))
+	if errconv != nil {
+		w.WriteHeader(404)
+		return
+	}
+	chirp, err := dbman.GetChirp(id)
+	if err != nil {
+		w.WriteHeader(404)
+		return
+	}
+	
+	out := output{
+		fmt.Sprintf("%v", chirp.ID),
+		chirp.CreatedAt.String(),
+		chirp.UpdatedAt.String(),
+		fmt.Sprintf("%v", chirp.UserID),
+		chirp.Body,
+	}
+	data, err_marshal := json.Marshal(out)
+	if err_marshal != nil {
+		w.WriteHeader(501)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	w.Write(data)
+	fmt.Print("FUNC END: GET CHIRP\n")
 }

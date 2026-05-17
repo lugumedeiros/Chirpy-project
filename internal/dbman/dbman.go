@@ -56,3 +56,7 @@ func DeleteChirpByUserId(userId int) error {
 func DeleteAllChirps() error {
 	return config.queries.DeleteAllChirps(config.context)
 }
+
+func GetAllChirps() ([]database.Chirp, error) {
+	return config.queries.GetAllChirps(config.context)
+}

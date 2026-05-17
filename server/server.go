@@ -16,7 +16,10 @@ func ListAndServeServer()error{
 	mux.HandleFunc("POST /admin/reset", resetFunc)
 	// mux.HandleFunc("POST /api/validate_chirp", validate_chirpFunc)
 	mux.HandleFunc("POST /api/users", setNewUserFunc)
+
 	mux.HandleFunc("POST /api/chirps", postChirpFunc)
+	mux.HandleFunc("GET /api/chirps", getChirpFunc)
+
 	fmt.Printf("FuncsHandler set to Server\n")
 	return http.ListenAndServe(":8080", mux)
 }

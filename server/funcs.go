@@ -60,7 +60,6 @@ func resetFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC END: RESET\n")
 }
 
-
 func setNewUserFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC START: SET USER\n")
 	type parameter struct {
@@ -157,4 +156,43 @@ func postChirpFunc(w http.ResponseWriter, r *http.Request){
 	w.WriteHeader(201)
 	w.Write(data)
 	fmt.Print("FUNC END: POST CHIRP\n")
+}
+
+func getChirpFunc(w http.ResponseWriter, r *http.Request){
+	type outputItem struct {
+		ID string `json:"id"`
+		CreatedAt string `json:"created_at"`
+		UpdatedAt string `json:"updated_at"`
+		UserID string `json:"user_id"`
+		Body string `json:"body"`
+	}
+	var items []outputItem
+	fmt.Print("FUNC START: GET CHIRPS\n")
+
+	chirps, errDB := dbman.GetAllChirps()
+	if errDB != nil {
+		w.WriteHeader(500)
+		return
+	}
+
+	for _, chirp := range chirps{
+		new_item := outputItem{
+			fmt.Sprintf("%v", chirp.ID),
+			chirp.CreatedAt.String(),
+			chirp.UpdatedAt.String(),
+			fmt.Sprintf("%v", chirp.UserID),
+			chirp.Body,
+		}
+		items = append(items, new_item)
+	}
+
+	data, err_marshal := json.Marshal(items)
+	if err_marshal != nil {
+		w.WriteHeader(501)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	w.Write(data)
+	fmt.Print("FUNC END: GET CHIRPS\n")
 }

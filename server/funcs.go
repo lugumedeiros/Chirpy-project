@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/lugumedeiros/Chirpy-project/internal/auth"
 	"github.com/lugumedeiros/Chirpy-project/internal/dbman"
@@ -109,17 +110,19 @@ func setNewUserFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC END: SET USER\n")
 }
 
-func getUserFunc(w http.ResponseWriter, r *http.Request) {
+func loginUserFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC START: GET USER\n")
 	type parameter struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email      string `json:"email"`
+		Password   string `json:"password"`
+		ExpireTime int    `json:"expires_in_seconds"`
 	}
 	type response struct {
 		Id        int    `json:"id"`
 		CreatedAt string `json:"created_at"`
 		UpdatedAt string `json:"updated_at"`
 		Email     string `json:"email"`
+		Token     string `json:"token"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -131,7 +134,7 @@ func getUserFunc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err_db := dbman.GetUser(params.Email)	
+	user, err_db := dbman.GetUser(params.Email)
 	if err_db != nil {
 		w.WriteHeader(500)
 		w.Write([]byte(err_db.Error()))
@@ -144,11 +147,22 @@ func getUserFunc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if params.ExpireTime > 3600 || params.ExpireTime <= 0 { // 1 Hour
+		params.ExpireTime = 3600
+	}
+
+	token, err := auth.MakeJWT(fmt.Sprintf("%v", user.ID), apicfg.getJWTKey(), time.Duration(params.ExpireTime)*time.Second)
+	if err != nil {
+		w.WriteHeader(502)
+		return
+	}
+
 	resp := response{
 		int(user.ID),
 		user.CreatedAt.String(),
 		user.UpgradedAt.String(),
 		user.Email,
+		token,
 	}
 	data, err_marshal := json.Marshal(resp)
 	if err_marshal != nil {
@@ -165,8 +179,8 @@ func getUserFunc(w http.ResponseWriter, r *http.Request) {
 func postChirpFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC START: POST CHIRP\n")
 	type input struct {
-		Body   string `json:"body"`
-		UserId string `json:"user_id"`
+		Body string `json:"body"`
+		// UserId string `json:"user_id"`
 	}
 
 	type output struct {
@@ -190,8 +204,21 @@ func postChirpFunc(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(501)
 		return
 	}
-	userId, _ := strconv.Atoi(inParams.UserId)
-	chirp, errDB := dbman.CreateChirp(userId, inParams.Body)
+
+	tokenString, _ := auth.GetBearerToken(r.Header)
+	userId, err := auth.ValidateJWT(tokenString, apicfg.getJWTKey())
+	if err != nil {
+		w.WriteHeader(401)
+		w.Write([]byte("Invalid token" + err.Error()))
+		return
+	}
+	userIdStr, erratoi := strconv.Atoi(userId)
+	if erratoi != nil {
+		w.WriteHeader(500)
+		return
+	}
+
+	chirp, errDB := dbman.CreateChirp(userIdStr, inParams.Body)
 	if errDB != nil {
 		w.WriteHeader(502)
 		w.Write([]byte(errDB.Error()))

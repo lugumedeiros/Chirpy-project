@@ -7,14 +7,14 @@ import (
 	"slices"
 )
 
-func ListAndServeServer()error{
+func ListAndServeServer() error {
 	setPlatform()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/app/", rootFunc)
 	mux.HandleFunc("GET /admin/healthz", healthzFunc)
 	mux.HandleFunc("GET /admin/metrics", metricsFunc)
 	mux.HandleFunc("POST /admin/reset", resetFunc)
-	mux.HandleFunc("POST /api/login", getUserFunc)
+	mux.HandleFunc("POST /api/login", loginUserFunc)
 	mux.HandleFunc("POST /api/users", setNewUserFunc)
 
 	mux.HandleFunc("POST /api/chirps", postChirpFunc)
@@ -25,12 +25,12 @@ func ListAndServeServer()error{
 	return http.ListenAndServe(":8080", mux)
 }
 
-func setPlatform(){
+func setPlatform() {
 	platforms := []string{"dev", "user", "admin"}
 	defaultPlatform := "user"
 	platform := os.Getenv("PLATFORM")
 	config := getApiConfig()
-	if slices.Contains(platforms, platform){
+	if slices.Contains(platforms, platform) {
 		config.setPlatform(platform)
 	} else {
 		config.setPlatform(defaultPlatform)

@@ -3,6 +3,7 @@ package server
 import 	(
 	"net/http"
 	"sync/atomic"
+	"os"
 )
 
 type apiConfig struct {
@@ -29,4 +30,8 @@ func (cfg *apiConfig) setPlatform(platform string) {
 
 func (cfg *apiConfig) getPlatform() string{
 	return cfg.platform
+}
+
+func (cfg *apiConfig) getJWTKey()(string){
+	return os.Getenv("JWT_KEY_CHIRP")
 }

@@ -30,14 +30,21 @@ func DBConnect() error {
 	return nil
 }
 
-func CreateUser(email string) (database.User, error){
-	return config.queries.CreateUser(config.context, email)
+// USER
+func CreateUser(email string, hash string) (database.User, error){
+	params := database.CreateUserParams{Email: email, HashedPassword: hash}
+	return config.queries.CreateUser(config.context, params)
 }
 
 func ResetUsers()(error){
 	return config.queries.ResetUsers(config.context)
 }
 
+func GetUser(email string) (database.User, error){
+	return config.queries.GetUser(config.context, email)
+}
+
+// CHIRP
 func CreateChirp(userId int, body string) (database.Chirp, error){
 	var params database.CreateChirpParams
 	params.Body = body

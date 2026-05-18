@@ -4,13 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"github.com/lugumedeiros/Chirpy-project/internal/dbman"
 	"strconv"
+
+	"github.com/lugumedeiros/Chirpy-project/internal/auth"
+	"github.com/lugumedeiros/Chirpy-project/internal/dbman"
 )
 
 var apicfg apiConfig
 
-func getApiConfig() *apiConfig{
+func getApiConfig() *apiConfig {
 	return &apicfg
 }
 
@@ -34,13 +36,13 @@ func metricsFunc(w http.ResponseWriter, r *http.Request) {
   </body>
 </html>
 	`,
-	apicfg.getHits()), "text/html", http.StatusOK)
+		apicfg.getHits()), "text/html", http.StatusOK)
 	fmt.Print("FUNC END: METRIC\n")
 }
 
 func resetFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC START: RESET\n")
-	if apicfg.getPlatform() != "dev"{
+	if apicfg.getPlatform() != "dev" {
 		w.WriteHeader(403)
 		return
 	}
@@ -63,15 +65,16 @@ func resetFunc(w http.ResponseWriter, r *http.Request) {
 func setNewUserFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC START: SET USER\n")
 	type parameter struct {
-		Email string `json:"email"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 	type response struct {
-		Id int `json:"id"`
+		Id        int    `json:"id"`
 		CreatedAt string `json:"created_at"`
 		UpdatedAt string `json:"updated_at"`
-		Email string `json:"email"`
+		Email     string `json:"email"`
 	}
-	
+
 	decoder := json.NewDecoder(r.Body)
 	params := parameter{}
 	err := decoder.Decode(&params)
@@ -80,7 +83,9 @@ func setNewUserFunc(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
-	user, err_db := dbman.CreateUser(params.Email)
+
+	hash, _ := auth.HashPassword(params.Password)
+	user, err_db := dbman.CreateUser(params.Email, hash)
 	if err_db != nil {
 		w.WriteHeader(501)
 		w.Write([]byte(err_db.Error()))
@@ -104,19 +109,72 @@ func setNewUserFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC END: SET USER\n")
 }
 
-func postChirpFunc(w http.ResponseWriter, r *http.Request){
+func getUserFunc(w http.ResponseWriter, r *http.Request) {
+	fmt.Print("FUNC START: GET USER\n")
+	type parameter struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	type response struct {
+		Id        int    `json:"id"`
+		CreatedAt string `json:"created_at"`
+		UpdatedAt string `json:"updated_at"`
+		Email     string `json:"email"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	params := parameter{}
+	err := decoder.Decode(&params)
+	if err != nil {
+		w.Write([]byte(err.Error()))
+		w.WriteHeader(502)
+		return
+	}
+
+	user, err_db := dbman.GetUser(params.Email)	
+	if err_db != nil {
+		w.WriteHeader(500)
+		w.Write([]byte(err_db.Error()))
+		return
+	}
+	check, _ := auth.CheckPasswordHash(params.Password, user.HashedPassword)
+	if !check {
+		w.WriteHeader(401)
+		w.Write([]byte("Incorrect email or password"))
+		return
+	}
+
+	resp := response{
+		int(user.ID),
+		user.CreatedAt.String(),
+		user.UpgradedAt.String(),
+		user.Email,
+	}
+	data, err_marshal := json.Marshal(resp)
+	if err_marshal != nil {
+		w.WriteHeader(502)
+		w.Write([]byte(err_marshal.Error()))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	w.Write(data)
+	fmt.Print("FUNC END: GET USER\n")
+}
+
+func postChirpFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC START: POST CHIRP\n")
 	type input struct {
-		Body string `json:"body"`
+		Body   string `json:"body"`
 		UserId string `json:"user_id"`
 	}
 
 	type output struct {
-		ID int `json:"id"`
+		ID        int    `json:"id"`
 		CreatedAt string `json:"created_at"`
 		UpdatedAt string `json:"updated_at"`
-		UserID string `json:"user_id"`
-		Body string `json:"body"`
+		UserID    string `json:"user_id"`
+		Body      string `json:"body"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -128,7 +186,7 @@ func postChirpFunc(w http.ResponseWriter, r *http.Request){
 		return
 	}
 	validatedChirp := validate_chirpFunc(inParams.Body)
-	if !validatedChirp.valid{
+	if !validatedChirp.valid {
 		w.WriteHeader(501)
 		return
 	}
@@ -146,7 +204,7 @@ func postChirpFunc(w http.ResponseWriter, r *http.Request){
 	outParams.ID = int(chirp.ID)
 	outParams.UserID = fmt.Sprintf("%v", chirp.UserID)
 	outParams.Body = chirp.Body
-	
+
 	data, err_marshal := json.Marshal(outParams)
 	if err_marshal != nil {
 		w.WriteHeader(503)
@@ -158,13 +216,13 @@ func postChirpFunc(w http.ResponseWriter, r *http.Request){
 	fmt.Print("FUNC END: POST CHIRP\n")
 }
 
-func getChirpFunc(w http.ResponseWriter, r *http.Request){
+func getChirpFunc(w http.ResponseWriter, r *http.Request) {
 	type outputItem struct {
-		ID string `json:"id"`
+		ID        string `json:"id"`
 		CreatedAt string `json:"created_at"`
 		UpdatedAt string `json:"updated_at"`
-		UserID string `json:"user_id"`
-		Body string `json:"body"`
+		UserID    string `json:"user_id"`
+		Body      string `json:"body"`
 	}
 	var items []outputItem
 	fmt.Print("FUNC START: GET CHIRPS\n")
@@ -175,7 +233,7 @@ func getChirpFunc(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
-	for _, chirp := range chirps{
+	for _, chirp := range chirps {
 		new_item := outputItem{
 			fmt.Sprintf("%v", chirp.ID),
 			chirp.CreatedAt.String(),
@@ -198,16 +256,16 @@ func getChirpFunc(w http.ResponseWriter, r *http.Request){
 
 }
 
-func getChirpByIdFunc(w http.ResponseWriter, r *http.Request){
+func getChirpByIdFunc(w http.ResponseWriter, r *http.Request) {
 	type output struct {
-		ID string `json:"id"`
+		ID        string `json:"id"`
 		CreatedAt string `json:"created_at"`
 		UpdatedAt string `json:"updated_at"`
-		UserID string `json:"user_id"`
-		Body string `json:"body"`
+		UserID    string `json:"user_id"`
+		Body      string `json:"body"`
 	}
 	fmt.Print("FUNC START: GET CHIRP\n")
-	
+
 	id, errconv := strconv.Atoi(r.PathValue("id"))
 	if errconv != nil {
 		w.WriteHeader(404)
@@ -218,7 +276,7 @@ func getChirpByIdFunc(w http.ResponseWriter, r *http.Request){
 		w.WriteHeader(404)
 		return
 	}
-	
+
 	out := output{
 		fmt.Sprintf("%v", chirp.ID),
 		chirp.CreatedAt.String(),

@@ -14,7 +14,7 @@ func ListAndServeServer()error{
 	mux.HandleFunc("GET /admin/healthz", healthzFunc)
 	mux.HandleFunc("GET /admin/metrics", metricsFunc)
 	mux.HandleFunc("POST /admin/reset", resetFunc)
-	// mux.HandleFunc("POST /api/validate_chirp", validate_chirpFunc)
+	mux.HandleFunc("POST /api/login", getUserFunc)
 	mux.HandleFunc("POST /api/users", setNewUserFunc)
 
 	mux.HandleFunc("POST /api/chirps", postChirpFunc)

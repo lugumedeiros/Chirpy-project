@@ -21,6 +21,9 @@ func ListAndServeServer() error {
 	mux.HandleFunc("GET /api/chirps", getChirpFunc)
 	mux.HandleFunc("GET /api/chirps/{id}", getChirpByIdFunc)
 
+	mux.HandleFunc("POST /api/refresh", refreshTokenFunc)
+	mux.HandleFunc("POST /api/revoke", revokeTokenFunc)
+
 	fmt.Printf("FuncsHandler set to Server\n")
 	return http.ListenAndServe(":8080", mux)
 }

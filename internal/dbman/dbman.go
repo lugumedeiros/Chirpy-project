@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"os"
 	"context"
-
+	"time"
 	"github.com/lugumedeiros/Chirpy-project/internal/database"
 )
 
@@ -70,4 +70,24 @@ func GetAllChirps() ([]database.Chirp, error) {
 
 func GetChirp(chirpID int) (database.Chirp, error) {
 	return config.queries.GetChirp(config.context, int32(chirpID))
+}
+
+// TOKENS
+func CreateRefreshToken(token string, user_id int, expires time.Time)(database.RefreshToken, error) {
+	params := database.AddRefreshTokenParams{
+		Token: token,
+		UserID: int32(user_id),
+		ExpiresAt: expires,
+		RevokedAt: sql.NullTime{},
+	}
+	return config.queries.AddRefreshToken(config.context, params)
+}
+
+func GetToken(token string)(database.RefreshToken, error){
+	return config.queries.GetRefreshTokenToken(config.context, token)
+}
+
+func RevokeToken(token string) error{
+	param := database.RevokeTokenParams{Token: token, RevokedAt: sql.NullTime{Time: time.Now(), Valid: true}}
+	return config.queries.RevokeToken(config.context, param)
 }

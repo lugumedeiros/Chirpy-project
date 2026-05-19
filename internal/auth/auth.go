@@ -8,6 +8,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	// "github.com/google/uuid"
 	"strings"
+	"crypto/rand"
+	"encoding/hex"
 )
 
 func HashPassword(psw string) (string, error) {
@@ -61,4 +63,10 @@ func GetBearerToken(headers http.Header) (string, error) {
 	} else {
 		return val, nil
 	}
+}
+
+func MakeRefreshToken() string{
+	val := make([]byte, 32)
+	rand.Read(val)
+	return hex.EncodeToString(val)
 }

@@ -1,6 +1,7 @@
 package server
 
 import (
+	// "database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -115,7 +116,6 @@ func loginUserFunc(w http.ResponseWriter, r *http.Request) {
 	type parameter struct {
 		Email      string `json:"email"`
 		Password   string `json:"password"`
-		ExpireTime int    `json:"expires_in_seconds"`
 	}
 	type response struct {
 		Id        int    `json:"id"`
@@ -123,6 +123,7 @@ func loginUserFunc(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt string `json:"updated_at"`
 		Email     string `json:"email"`
 		Token     string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -146,15 +147,20 @@ func loginUserFunc(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Incorrect email or password"))
 		return
 	}
-
-	if params.ExpireTime > 3600 || params.ExpireTime <= 0 { // 1 Hour
-		params.ExpireTime = 3600
-	}
-
-	token, err := auth.MakeJWT(fmt.Sprintf("%v", user.ID), apicfg.getJWTKey(), time.Duration(params.ExpireTime)*time.Second)
+	
+	
+	expireDuration :=time.Duration(time.Hour * 24 * 60)
+	accessToken, err := auth.MakeJWT(fmt.Sprintf("%v", user.ID), apicfg.getJWTKey(), expireDuration)
 	if err != nil {
 		w.WriteHeader(502)
 		return
+	}
+	
+	refreshToken := auth.MakeRefreshToken()
+	_, errtoken := dbman.CreateRefreshToken(refreshToken, int(user.ID), time.Now().Add(expireDuration))
+	if errtoken != nil {
+		w.Write([]byte(errtoken.Error()))
+		w.WriteHeader(401)
 	}
 
 	resp := response{
@@ -162,7 +168,8 @@ func loginUserFunc(w http.ResponseWriter, r *http.Request) {
 		user.CreatedAt.String(),
 		user.UpgradedAt.String(),
 		user.Email,
-		token,
+		accessToken,
+		refreshToken,
 	}
 	data, err_marshal := json.Marshal(resp)
 	if err_marshal != nil {
@@ -320,4 +327,59 @@ func getChirpByIdFunc(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	w.Write(data)
 	fmt.Print("FUNC END: GET CHIRP\n")
+}
+
+func refreshTokenFunc(w http.ResponseWriter, r *http.Request) {
+	type response struct {
+		Token     string `json:"token"`
+	}
+
+	tokenKey, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		w.WriteHeader(501)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	token, errdb := dbman.GetToken(tokenKey)
+	if errdb != nil {
+		w.WriteHeader(501)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	if token.RevokedAt.Valid || token.ExpiresAt.Compare(time.Now()) == -1{
+		w.WriteHeader(401)
+		return
+	}
+
+	jwtToken, errtoken := auth.MakeJWT(
+		fmt.Sprintf("%v", token.UserID),
+		apicfg.getJWTKey(),
+		time.Duration(time.Hour),
+	)
+		if errtoken != nil {
+		w.WriteHeader(501)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	resp := response{jwtToken}
+	data, err_marshal := json.Marshal(resp)
+	if err_marshal != nil {
+		w.WriteHeader(502)
+		w.Write([]byte(err_marshal.Error()))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	w.Write(data)
+}
+
+func revokeTokenFunc(w http.ResponseWriter, r *http.Request) {
+	tokenKey, _ := auth.GetBearerToken(r.Header)
+	err := dbman.RevokeToken(tokenKey)
+	if err != nil {
+		w.WriteHeader(506)
+		return
+	}
+	w.WriteHeader(204)
 }

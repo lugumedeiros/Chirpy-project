@@ -44,6 +44,20 @@ func GetUser(email string) (database.User, error){
 	return config.queries.GetUser(config.context, email)
 }
 
+func GetUserById(id int) (database.User, error){
+	return config.queries.GetUserById(config.context, int32(id))
+}
+
+func UpdateUser(id int, email, hash string) error {
+	params := database.UpdateUserParams{
+		ID: int32(id),
+		UpgradedAt: time.Now(),
+		Email: email,
+		HashedPassword: hash,
+	}
+	return config.queries.UpdateUser(config.context, params)
+}
+
 // CHIRP
 func CreateChirp(userId int, body string) (database.Chirp, error){
 	var params database.CreateChirpParams

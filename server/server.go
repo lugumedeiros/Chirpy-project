@@ -16,10 +16,12 @@ func ListAndServeServer() error {
 	mux.HandleFunc("POST /admin/reset", resetFunc)
 	mux.HandleFunc("POST /api/login", loginUserFunc)
 	mux.HandleFunc("POST /api/users", setNewUserFunc)
+	mux.HandleFunc("PUT /api/users", updateUserFunc)
 
 	mux.HandleFunc("POST /api/chirps", postChirpFunc)
 	mux.HandleFunc("GET /api/chirps", getChirpFunc)
 	mux.HandleFunc("GET /api/chirps/{id}", getChirpByIdFunc)
+	mux.HandleFunc("DELETE /api/chirps/{id}", deleteChirpByIdFunc)
 
 	mux.HandleFunc("POST /api/refresh", refreshTokenFunc)
 	mux.HandleFunc("POST /api/revoke", revokeTokenFunc)

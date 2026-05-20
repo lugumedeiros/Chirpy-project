@@ -64,6 +64,7 @@ func resetFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC END: RESET\n")
 }
 
+// USERS
 func setNewUserFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC START: SET USER\n")
 	type parameter struct {
@@ -114,15 +115,15 @@ func setNewUserFunc(w http.ResponseWriter, r *http.Request) {
 func loginUserFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC START: GET USER\n")
 	type parameter struct {
-		Email      string `json:"email"`
-		Password   string `json:"password"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 	type response struct {
-		Id        int    `json:"id"`
-		CreatedAt string `json:"created_at"`
-		UpdatedAt string `json:"updated_at"`
-		Email     string `json:"email"`
-		Token     string `json:"token"`
+		Id           int    `json:"id"`
+		CreatedAt    string `json:"created_at"`
+		UpdatedAt    string `json:"updated_at"`
+		Email        string `json:"email"`
+		Token        string `json:"token"`
 		RefreshToken string `json:"refresh_token"`
 	}
 
@@ -147,15 +148,14 @@ func loginUserFunc(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Incorrect email or password"))
 		return
 	}
-	
-	
-	expireDuration :=time.Duration(time.Hour * 24 * 60)
+
+	expireDuration := time.Duration(time.Hour * 24 * 60)
 	accessToken, err := auth.MakeJWT(fmt.Sprintf("%v", user.ID), apicfg.getJWTKey(), expireDuration)
 	if err != nil {
 		w.WriteHeader(502)
 		return
 	}
-	
+
 	refreshToken := auth.MakeRefreshToken()
 	_, errtoken := dbman.CreateRefreshToken(refreshToken, int(user.ID), time.Now().Add(expireDuration))
 	if errtoken != nil {
@@ -183,6 +183,50 @@ func loginUserFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC END: GET USER\n")
 }
 
+func updateUserFunc(w http.ResponseWriter, r *http.Request) {
+	type input struct {
+		Email    string `json"email"`
+		Password string `json"password"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	inParams := input{}
+	errDec := decoder.Decode(&inParams)
+	if errDec != nil {
+		w.WriteHeader(400)
+		w.Write([]byte(errDec.Error()))
+		return
+	}
+	token, _ := auth.GetBearerToken(r.Header)
+	newHashedPass, _ := auth.HashPassword(inParams.Password)
+	userId, err := auth.ValidateJWT(token, apicfg.getJWTKey())
+	if err != nil {
+		w.WriteHeader(401)
+		w.Write([]byte("Invalid token" + err.Error()))
+		return
+	}
+	userIdInt, _ := strconv.Atoi(userId)
+	errupdt := dbman.UpdateUser(userIdInt, inParams.Email, newHashedPass)
+	if errupdt != nil {
+		w.WriteHeader(401)
+		w.Write([]byte(errDec.Error()))
+		return
+	}
+
+	type out struct {
+		Email string `json:"email"`
+	}
+	data, err_marshal := json.Marshal(out{inParams.Email})
+	if err_marshal != nil {
+		w.WriteHeader(503)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	w.Write(data)
+}
+
+// CHIRP
 func postChirpFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC START: POST CHIRP\n")
 	type input struct {
@@ -329,9 +373,10 @@ func getChirpByIdFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC END: GET CHIRP\n")
 }
 
+// TOKENS
 func refreshTokenFunc(w http.ResponseWriter, r *http.Request) {
 	type response struct {
-		Token     string `json:"token"`
+		Token string `json:"token"`
 	}
 
 	tokenKey, err := auth.GetBearerToken(r.Header)
@@ -346,7 +391,7 @@ func refreshTokenFunc(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 		return
 	}
-	if token.RevokedAt.Valid || token.ExpiresAt.Compare(time.Now()) == -1{
+	if token.RevokedAt.Valid || token.ExpiresAt.Compare(time.Now()) == -1 {
 		w.WriteHeader(401)
 		return
 	}
@@ -356,7 +401,7 @@ func refreshTokenFunc(w http.ResponseWriter, r *http.Request) {
 		apicfg.getJWTKey(),
 		time.Duration(time.Hour),
 	)
-		if errtoken != nil {
+	if errtoken != nil {
 		w.WriteHeader(501)
 		w.Write([]byte(err.Error()))
 		return

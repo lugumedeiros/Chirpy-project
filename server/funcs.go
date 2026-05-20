@@ -373,6 +373,38 @@ func getChirpByIdFunc(w http.ResponseWriter, r *http.Request) {
 	fmt.Print("FUNC END: GET CHIRP\n")
 }
 
+func deleteChirpByIdFunc(w http.ResponseWriter, r *http.Request){
+	tokenString, _ := auth.GetBearerToken(r.Header)
+	userIdstring, err := auth.ValidateJWT(tokenString, apicfg.getJWTKey())
+	userId, _ := strconv.Atoi(userIdstring)
+	if err != nil {
+		w.WriteHeader(401)
+		w.Write([]byte("Invalid token" + err.Error()))
+		return
+	}
+	chirpId, errconv := strconv.Atoi(r.PathValue("id"))
+	if errconv != nil {
+		w.WriteHeader(401)
+		return
+	}
+	chirp, err := dbman.GetChirp(chirpId)
+	if err != nil {
+		w.WriteHeader(404)
+		return
+	}
+	if chirp.UserID != int32(userId){
+		w.WriteHeader(403)
+		return
+	}
+
+	err = dbman.DeleteChirp(chirpId)
+	if err != nil {
+		w.WriteHeader(500)
+	} else {
+		w.WriteHeader(204)
+	}
+}
+
 // TOKENS
 func refreshTokenFunc(w http.ResponseWriter, r *http.Request) {
 	type response struct {

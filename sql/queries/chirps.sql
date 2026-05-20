@@ -9,6 +9,9 @@ DELETE FROM chirps WHERE user_id = $1;
 -- name: DeleteChirp :exec
 DELETE FROM chirps WHERE id = $1;
 
+-- name: DeleteChirp2Step :exec
+DELETE FROM chirps WHERE id = $1 AND user_id = $2;
+
 -- name: DeleteAllChirps :exec
 DELETE FROM chirps;
 

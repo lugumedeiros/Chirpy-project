@@ -51,6 +51,20 @@ func (q *Queries) DeleteChirp(ctx context.Context, id int32) error {
 	return err
 }
 
+const deleteChirp2Step = `-- name: DeleteChirp2Step :exec
+DELETE FROM chirps WHERE id = $1 AND user_id = $2
+`
+
+type DeleteChirp2StepParams struct {
+	ID     int32
+	UserID int32
+}
+
+func (q *Queries) DeleteChirp2Step(ctx context.Context, arg DeleteChirp2StepParams) error {
+	_, err := q.db.ExecContext(ctx, deleteChirp2Step, arg.ID, arg.UserID)
+	return err
+}
+
 const deleteChirpsByUserId = `-- name: DeleteChirpsByUserId :exec
 DELETE FROM chirps WHERE user_id = $1
 `

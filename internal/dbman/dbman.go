@@ -70,6 +70,11 @@ func DeleteChirp(chirpId int) error{
 	return config.queries.DeleteChirp(config.context, int32(chirpId))
 }
 
+func DeleteChirp2Step(chirpId, userId int) error{
+	param := database.DeleteChirp2StepParams{ID: int32(chirpId), UserID: int32(userId)}
+	return config.queries.DeleteChirp2Step(config.context, param)
+}
+
 func DeleteChirpByUserId(userId int) error {
 	return config.queries.DeleteChirpsByUserId(config.context, int32(userId))
 }

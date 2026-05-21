@@ -76,6 +76,7 @@ func setNewUserFunc(w http.ResponseWriter, r *http.Request) {
 		CreatedAt string `json:"created_at"`
 		UpdatedAt string `json:"updated_at"`
 		Email     string `json:"email"`
+		IsRed bool `json:"is_chirpy_red"`		
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -99,6 +100,7 @@ func setNewUserFunc(w http.ResponseWriter, r *http.Request) {
 		user.CreatedAt.String(),
 		user.UpgradedAt.String(),
 		user.Email,
+		user.IsChirpyRed,
 	}
 	data, err_marshal := json.Marshal(resp)
 	if err_marshal != nil {
@@ -125,6 +127,7 @@ func loginUserFunc(w http.ResponseWriter, r *http.Request) {
 		Email        string `json:"email"`
 		Token        string `json:"token"`
 		RefreshToken string `json:"refresh_token"`
+		IsRed bool `json:"is_chirpy_red"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -170,6 +173,7 @@ func loginUserFunc(w http.ResponseWriter, r *http.Request) {
 		user.Email,
 		accessToken,
 		refreshToken,
+		user.IsChirpyRed,
 	}
 	data, err_marshal := json.Marshal(resp)
 	if err_marshal != nil {
@@ -224,6 +228,52 @@ func updateUserFunc(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 	w.Write(data)
+}
+
+func upgradeUserFunc(w http.ResponseWriter, r *http.Request) {
+	type dataInput struct{
+		UserId string `json:"user_id"`
+	}
+	type input struct{
+		Event string `json:"event"`
+		Data dataInput `json:"data"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	params := input{}
+	err := decoder.Decode(&params)
+	if err != nil {
+		w.Write([]byte(err.Error()))
+		w.WriteHeader(502)
+		return
+	}
+
+	
+	if params.Event != "user.upgraded" {
+		w.WriteHeader(204)
+		return
+	}
+	idint, _ := strconv.Atoi(params.Data.UserId)
+	// user, errdb := dbman.GetUserById(idint)
+	// if errdb != nil {
+	// 	w.Write([]byte(err.Error()))
+	// 	w.WriteHeader(500)
+	// 	return
+	// }
+	// if user.IsChirpyRed {
+	// 	w.WriteHeader(200)
+	// 	return
+	// }
+
+	err = dbman.UpdateRedMark(idint, true)
+	if err != nil {
+		w.Write([]byte(err.Error()))
+		w.WriteHeader(404)
+		return
+	}
+	
+	w.WriteHeader(204)
+
 }
 
 // CHIRP

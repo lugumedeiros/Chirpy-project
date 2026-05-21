@@ -13,7 +13,7 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO users(created_at, upgraded_at, email, hashed_password) VALUES (
     NOW(), NOW(), $1, $2
-) RETURNING id, created_at, upgraded_at, email, hashed_password
+) RETURNING id, created_at, upgraded_at, email, hashed_password, is_chirpy_red
 `
 
 type CreateUserParams struct {
@@ -30,12 +30,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.UpgradedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, created_at, upgraded_at, email, hashed_password FROM users WHERE email = $1
+SELECT id, created_at, upgraded_at, email, hashed_password, is_chirpy_red FROM users WHERE email = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, email string) (User, error) {
@@ -47,12 +48,13 @@ func (q *Queries) GetUser(ctx context.Context, email string) (User, error) {
 		&i.UpgradedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
 
 const getUserById = `-- name: GetUserById :one
-SELECT id, created_at, upgraded_at, email, hashed_password FROM users WHERE id = $1
+SELECT id, created_at, upgraded_at, email, hashed_password, is_chirpy_red FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserById(ctx context.Context, id int32) (User, error) {
@@ -64,6 +66,7 @@ func (q *Queries) GetUserById(ctx context.Context, id int32) (User, error) {
 		&i.UpgradedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
@@ -74,6 +77,20 @@ DELETE FROM users
 
 func (q *Queries) ResetUsers(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, resetUsers)
+	return err
+}
+
+const updateRed = `-- name: UpdateRed :exec
+UPDATE users SET is_chirpy_red = $2 WHERE id = $1
+`
+
+type UpdateRedParams struct {
+	ID          int32
+	IsChirpyRed bool
+}
+
+func (q *Queries) UpdateRed(ctx context.Context, arg UpdateRedParams) error {
+	_, err := q.db.ExecContext(ctx, updateRed, arg.ID, arg.IsChirpyRed)
 	return err
 }
 

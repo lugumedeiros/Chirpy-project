@@ -110,3 +110,7 @@ func RevokeToken(token string) error{
 	param := database.RevokeTokenParams{Token: token, RevokedAt: sql.NullTime{Time: time.Now(), Valid: true}}
 	return config.queries.RevokeToken(config.context, param)
 }
+
+func UpdateRedMark(id int, is_red bool) error{
+	return config.queries.UpdateRed(config.context, database.UpdateRedParams{ID: int32(id), IsChirpyRed: is_red})
+}

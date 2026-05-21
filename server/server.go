@@ -26,6 +26,8 @@ func ListAndServeServer() error {
 	mux.HandleFunc("POST /api/refresh", refreshTokenFunc)
 	mux.HandleFunc("POST /api/revoke", revokeTokenFunc)
 
+	mux.HandleFunc("POST /api/polka/webhooks", upgradeUserFunc)
+
 	fmt.Printf("FuncsHandler set to Server\n")
 	return http.ListenAndServe(":8080", mux)
 }

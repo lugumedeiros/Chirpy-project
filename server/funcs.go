@@ -239,6 +239,11 @@ func upgradeUserFunc(w http.ResponseWriter, r *http.Request) {
 		Data dataInput `json:"data"`
 	}
 
+	key, _ := auth.GetApiKey(r.Header)
+	if key != apicfg.getPolkaKey() {
+		w.WriteHeader(401)
+		return
+	}
 	decoder := json.NewDecoder(r.Body)
 	params := input{}
 	err := decoder.Decode(&params)
@@ -246,25 +251,12 @@ func upgradeUserFunc(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 		w.WriteHeader(502)
 		return
-	}
-
-	
+	}	
 	if params.Event != "user.upgraded" {
 		w.WriteHeader(204)
 		return
 	}
 	idint, _ := strconv.Atoi(params.Data.UserId)
-	// user, errdb := dbman.GetUserById(idint)
-	// if errdb != nil {
-	// 	w.Write([]byte(err.Error()))
-	// 	w.WriteHeader(500)
-	// 	return
-	// }
-	// if user.IsChirpyRed {
-	// 	w.WriteHeader(200)
-	// 	return
-	// }
-
 	err = dbman.UpdateRedMark(idint, true)
 	if err != nil {
 		w.Write([]byte(err.Error()))

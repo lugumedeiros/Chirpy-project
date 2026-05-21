@@ -70,3 +70,14 @@ func MakeRefreshToken() string{
 	rand.Read(val)
 	return hex.EncodeToString(val)
 }
+
+func GetApiKey(headers http.Header) (string, error){
+	const prefix = "ApiKey "
+	authValRaw := headers.Get("Authorization")
+	val := strings.Replace(authValRaw, prefix, "", 1)
+	if val == "" {
+		return "", fmt.Errorf("Invalid auth key")
+	} else {
+		return val, nil
+	}
+}

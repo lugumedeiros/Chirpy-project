@@ -35,3 +35,7 @@ func (cfg *apiConfig) getPlatform() string{
 func (cfg *apiConfig) getJWTKey()(string){
 	return os.Getenv("JWT_KEY_CHIRP")
 }
+
+func (cfg *apiConfig) getPolkaKey()(string){
+	return os.Getenv("POLKA_KEY")
+}

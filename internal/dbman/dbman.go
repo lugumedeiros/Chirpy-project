@@ -91,6 +91,11 @@ func GetChirp(chirpID int) (database.Chirp, error) {
 	return config.queries.GetChirp(config.context, int32(chirpID))
 }
 
+func GetAllChirpsByUserId(userId int)([]database.Chirp, error){
+	return config.queries.GetAllChirpsByUserId(config.context, int32(userId))
+}
+
+
 // TOKENS
 func CreateRefreshToken(token string, user_id int, expires time.Time)(database.RefreshToken, error) {
 	params := database.AddRefreshTokenParams{

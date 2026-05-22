@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"slices"
 
 	"github.com/lugumedeiros/Chirpy-project/internal/auth"
+	"github.com/lugumedeiros/Chirpy-project/internal/database"
 	"github.com/lugumedeiros/Chirpy-project/internal/dbman"
 )
 
@@ -347,12 +349,29 @@ func getChirpFunc(w http.ResponseWriter, r *http.Request) {
 	var items []outputItem
 	fmt.Print("FUNC START: GET CHIRPS\n")
 
-	chirps, errDB := dbman.GetAllChirps()
+
+	authorIdString := r.URL.Query().Get("author_id")
+	var chirps []database.Chirp
+	var errDB error
+	if authorIdString != "" {
+		authorId, _ := strconv.Atoi(authorIdString)
+		chirps, errDB = dbman.GetAllChirpsByUserId(authorId)
+	} else {
+		chirps, errDB = dbman.GetAllChirps()
+	}
+
 	if errDB != nil {
 		w.WriteHeader(500)
 		return
-	}
+	}	
 
+	sort := r.URL.Query().Get("sort")
+	if sort == "desc"{
+		slices.SortFunc(chirps, func(a, b database.Chirp) int {return -a.CreatedAt.Compare(b.CreatedAt)})
+	} else {
+		slices.SortFunc(chirps, func(a, b database.Chirp) int {return a.CreatedAt.Compare(b.CreatedAt)})
+	}
+	
 	for _, chirp := range chirps {
 		new_item := outputItem{
 			fmt.Sprintf("%v", chirp.ID),
